@@ -1,0 +1,27 @@
+@model LoginViewModel
+@{ ViewData["Title"] = "Login"; }
+
+<div class="auth-wrap">
+    <div class="card-soft auth-card">
+        <div class="auth-hero">
+            <i class="bi bi-flower2"></i>
+            <h4 class="mt-2 mb-1">Welcome back</h4>
+            <small>Sign in to monitor your fields</small>
+        </div>
+        <div class="auth-body">
+            <form asp-action="Login" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+                <div class="mb-3">
+                    <label asp-for="Username" class="form-label"></label>
+                    <input asp-for="Username" class="form-control" autofocus />
+                </div>
+                <div class="mb-4">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" />
+                </div>
+                <button class="btn btn-agri w-100">Sign in</button>
+            </form>
+            <p class="text-center text-muted mt-3 mb-0">No account? <a asp-action="Register">Register</a></p>
+        </div>
+    </div>
+</div>

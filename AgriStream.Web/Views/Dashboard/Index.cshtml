@@ -1,0 +1,99 @@
+@model DashboardViewModel
+@{ ViewData["Title"] = "Field Dashboard"; }
+
+<div class="page-header">
+    <div>
+        <h1>Field @Model.FieldId</h1>
+        <p>Live telemetry and irrigation control</p>
+    </div>
+    <form method="get">
+        <select name="fieldId" class="form-select" onchange="this.form.submit()">
+            @foreach (var f in new[] { "F1", "F2" })
+            {
+                <option value="@f" selected="@(f == Model.FieldId)">Field @f</option>
+            }
+        </select>
+    </form>
+</div>
+
+@if (Model.Error != null)
+{
+    <div class="alert alert-warning border-0 shadow-sm">@Model.Error</div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-tile"><div class="icon"><i class="bi bi-droplet-half"></i></div>
+            <div class="value">@(Model.AvgMoisture?.ToString() ?? "--")<small class="fs-6">%</small></div><div class="label">Avg soil moisture</div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-tile"><div class="icon"><i class="bi bi-thermometer-half"></i></div>
+            <div class="value">@(Model.AvgTemperature?.ToString() ?? "--")<small class="fs-6">&deg;C</small></div><div class="label">Avg temperature</div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-tile"><div class="icon"><i class="bi bi-broadcast"></i></div>
+            <div class="value">@Model.Readings.Count</div><div class="label">Recent readings</div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-tile"><div class="icon"><i class="bi bi-gear-wide-connected"></i></div>
+            <div class="value">@Model.Devices.Count(d => d.Status == "Irrigating")/@Model.Devices.Count</div><div class="label">Devices irrigating</div></div>
+    </div>
+</div>
+
+<div class="card-soft mb-4">
+    <div class="card-header-soft"><span><i class="bi bi-cpu me-2"></i>Devices</span></div>
+    <table class="table table-modern">
+        <thead><tr><th>Device</th><th>Status</th><th>Last command (UTC)</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var d in Model.Devices)
+        {
+            <tr>
+                <td class="fw-semibold">@d.Name</td>
+                <td><span class="status-badge status-@d.Status">@d.Status</span></td>
+                <td class="text-muted">@(d.LastCommandUtc?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</td>
+                <td class="text-end">
+                    @if (User.IsInRole("Farmer") || User.IsInRole("Admin"))
+                    {
+                        <form asp-action="Irrigate" method="post">
+                            <input type="hidden" name="deviceId" value="@d.DeviceId" />
+                            <input type="hidden" name="fieldId" value="@Model.FieldId" />
+                            <button class="btn btn-agri btn-sm"><i class="bi bi-water me-1"></i>Trigger Irrigation</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="card-soft">
+    <div class="card-header-soft">
+        <span><i class="bi bi-activity me-2"></i>Latest telemetry</span>
+        @if (User.IsInRole("Admin"))
+        {
+            <form asp-action="SimulateSensors" method="post">
+                <input type="hidden" name="fieldId" value="@Model.FieldId" />
+                <button class="btn btn-outline-success btn-sm">Simulate sensor readings</button>
+            </form>
+        }
+    </div>
+    <table class="table table-modern">
+        <thead><tr><th>Time (UTC)</th><th>Sensor</th><th>Soil moisture</th><th>Temperature</th></tr></thead>
+        <tbody>
+        @foreach (var r in Model.Readings)
+        {
+            <tr>
+                <td>@r.RecordedUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                <td>@r.SensorId</td>
+                <td>@r.SoilMoisture %</td>
+                <td>@r.Temperature &deg;C</td>
+            </tr>
+        }
+        @if (Model.Readings.Count == 0)
+        {
+            <tr><td colspan="4" class="text-center text-muted py-4">No telemetry yet.</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

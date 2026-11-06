@@ -1,0 +1,34 @@
+@model RegisterViewModel
+@{ ViewData["Title"] = "Register"; }
+
+<div class="auth-wrap">
+    <div class="card-soft auth-card">
+        <div class="auth-hero">
+            <i class="bi bi-person-plus"></i>
+            <h4 class="mt-2 mb-1">Create account</h4>
+            <small>Join AgriStream as a Farmer or Agronomist</small>
+        </div>
+        <div class="auth-body">
+            <form asp-action="Register" method="post">
+                <div asp-validation-summary="All" class="text-danger mb-2"></div>
+                <div class="mb-3">
+                    <label asp-for="Username" class="form-label"></label>
+                    <input asp-for="Username" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" />
+                </div>
+                <div class="mb-4">
+                    <label asp-for="Role" class="form-label"></label>
+                    <select asp-for="Role" class="form-select">
+                        <option>Farmer</option>
+                        <option>Agronomist</option>
+                    </select>
+                </div>
+                <button class="btn btn-agri w-100">Create account</button>
+            </form>
+            <p class="text-center text-muted mt-3 mb-0">Already registered? <a asp-action="Login">Sign in</a></p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,59 @@
+@using Azure.Data.Tables
+@model List<(string Name, DateTimeOffset? Created, string Url)>
+@{
+    ViewData["Title"] = "Drone Images";
+    var audit = (List<TableEntity>)ViewBag.Audit;
+}
+
+<div class="page-header">
+    <div>
+        <h1>Drone Images</h1>
+        <p>Uploads go to Blob Storage; a function logs each one to Table Storage</p>
+    </div>
+</div>
+
+<div class="card-soft mb-4 p-3">
+    <form asp-action="Upload" method="post" enctype="multipart/form-data" class="drop-zone d-flex flex-wrap gap-3 align-items-center">
+        <i class="bi bi-cloud-arrow-up fs-2 text-success"></i>
+        <input type="file" name="file" accept="image/jpeg,image/png" class="form-control w-auto flex-grow-1" />
+        <button class="btn btn-agri">Upload image</button>
+    </form>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card-soft">
+            <div class="card-header-soft"><span><i class="bi bi-images me-2"></i>Blob Storage</span><span class="text-muted">@Model.Count files</span></div>
+            <ul class="list-group list-group-flush">
+                @foreach (var i in Model)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-truncate me-2">@i.Name</span>
+                        <small class="text-muted">@i.Created?.ToString("HH:mm:ss")</small>
+                    </li>
+                }
+                @if (Model.Count == 0) { <li class="list-group-item text-muted text-center py-4">No images yet.</li> }
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card-soft">
+            <div class="card-header-soft"><span><i class="bi bi-clipboard-check me-2"></i>Processing audit (Table Storage)</span></div>
+            <table class="table table-modern">
+                <thead><tr><th>Blob</th><th>Size</th><th>Status</th><th>Processed (UTC)</th></tr></thead>
+                <tbody>
+                @foreach (var a in audit)
+                {
+                    <tr>
+                        <td class="text-truncate" style="max-width:180px">@a.GetString("BlobName")</td>
+                        <td>@(Convert.ToInt64(a["SizeBytes"] ?? 0) / 1024) KB</td>
+                        <td><span class="status-badge status-Irrigating">@a.GetString("Status")</span></td>
+                        <td>@(DateTimeOffset.TryParse(Convert.ToString(a["ProcessedUtc"], System.Globalization.CultureInfo.InvariantCulture), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var processed) ? processed.ToString("HH:mm:ss") : "")</td>
+                    </tr>
+                }
+                @if (audit.Count == 0) { <tr><td colspan="4" class="text-center text-muted py-4">No audit entries yet.</td></tr> }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
