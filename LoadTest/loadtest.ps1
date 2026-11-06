@@ -1,5 +1,7 @@
-# Simple concurrent load generator for the App Service.
+# Concurrent load generator for the App Service.
+# Keeps $Users HTTP requests in flight at all times against the CPU-bound /Home/Stress endpoint.
 # Usage: .\loadtest.ps1 -BaseUrl https://<app>.azurewebsites.net -Users 50 -Seconds 300
+# Works on Windows PowerShell 5.1 and PowerShell 7+ (no external modules required).
 param(
     [Parameter(Mandatory)] [string] $BaseUrl,
     [int] $Users = 50,
@@ -7,24 +9,42 @@ param(
     [int] $StressMs = 300
 )
 
-$end = (Get-Date).AddSeconds($Seconds)
+Add-Type -AssemblyName System.Net.Http
 
-# One runspace-backed job per simulated user; each loops until the deadline.
-$jobs = 1..$Users | ForEach-Object {
-    Start-ThreadJob -ArgumentList $BaseUrl, $end, $StressMs {
-        param($url, $end, $ms)
-        $ok = 0; $fail = 0
-        while ((Get-Date) -lt $end) {
-            try {
-                Invoke-WebRequest "$url/Home/Stress?ms=$ms" -UseBasicParsing -TimeoutSec 30 | Out-Null
-                $ok++
-            } catch { $fail++ }
-        }
-        [pscustomobject]@{ Ok = $ok; Failed = $fail }
+$client = New-Object System.Net.Http.HttpClient
+$client.Timeout = [TimeSpan]::FromSeconds(30)
+
+$end   = (Get-Date).AddSeconds($Seconds)
+$ok    = 0
+$fail  = 0
+$tasks = New-Object System.Collections.ArrayList
+
+Write-Host "Load test started: $Users concurrent users for $Seconds seconds against $BaseUrl"
+
+while ((Get-Date) -lt $end) {
+    # Top up to $Users requests in flight.
+    while ($tasks.Count -lt $Users -and (Get-Date) -lt $end) {
+        [void]$tasks.Add($client.GetStringAsync("$BaseUrl/Home/Stress?ms=$StressMs"))
     }
+    # Collect completed requests.
+    for ($i = $tasks.Count - 1; $i -ge 0; $i--) {
+        if ($tasks[$i].IsCompleted) {
+            if ($tasks[$i].Status -eq 'RanToCompletion') { $ok++ } else { $fail++ }
+            $tasks.RemoveAt($i)
+        }
+    }
+    Start-Sleep -Milliseconds 10
 }
 
-$results = $jobs | Receive-Job -Wait -AutoRemoveJob
-$totalOk = ($results | Measure-Object Ok -Sum).Sum
-$totalFail = ($results | Measure-Object Failed -Sum).Sum
-"Users: $Users  Duration: ${Seconds}s  Success: $totalOk  Failed: $totalFail  Req/s: $([math]::Round($totalOk / $Seconds, 1))"
+# Drain requests still in flight when the timer expired.
+foreach ($t in $tasks) {
+    try {
+        $t.Wait()
+        if ($t.Status -eq 'RanToCompletion') { $ok++ } else { $fail++ }
+    } catch { $fail++ }
+}
+$client.Dispose()
+
+$total = $ok + $fail
+""
+"Users: $Users  Duration: ${Seconds}s  Total: $total  Success: $ok  Failed: $fail  Req/s: $([math]::Round($ok / $Seconds, 1))"
