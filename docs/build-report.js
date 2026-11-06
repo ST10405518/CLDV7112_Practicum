@@ -69,7 +69,7 @@ const cover = [
   table(['Submission item', 'Link'], [
     ['Deployed web application', `https://st10405518-web.azurewebsites.net`],
     ['Function App', 'https://st10405518-func.azurewebsites.net'],
-    ['Source code repository', '[paste GitHub / Azure DevOps link]'],
+    ['Source code repository', 'https://github.com/ST10405518/CLDV7112_Practicum'],
   ]),
   pageBreak(),
 ];
